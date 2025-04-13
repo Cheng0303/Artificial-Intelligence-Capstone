@@ -20,36 +20,46 @@ def evaluate_model(model, env, num_episodes=10):
             action, _ = model.predict(obs)
             obs, reward, done, _ = env.step(action)
             total_reward += reward
+
         
         episode_rewards.append(total_reward)
     
     return np.mean(episode_rewards), np.std(episode_rewards)
 
 
-def makeVideo(model, env, filename="breakout_dqn.gif"):
+def makeVideo(model, envname, filename="breakout_dqn.gif"):
 
     video_folder = "./videos/"
     os.makedirs(video_folder, exist_ok=True)
 
-    print(gym.__version__)
 
-    test_env = gym.make("ALE/Breakout-v5", render_mode="rgb_array")
-    # test_env = RecordVideo(test_env, video_folder=video_folder, episode_trigger=lambda e: True)  
-    test_env = DummyVecEnv([lambda: test_env])
-    test_env = VecFrameStack(test_env, n_stack=4)
+    if envname == "ALE/Breakout-v5":
 
-    
+        test_env = gym.make("ALE/Breakout-v5", render_mode="rgb_array")
+        # test_env = RecordVideo(test_env, video_folder=video_folder, episode_trigger=lambda e: True)  
+        test_env = DummyVecEnv([lambda: test_env])
+        test_env = VecFrameStack(test_env, n_stack=4)
+
+    else:
+
+        test_env = gym.make(envname, render_mode="rgb_array")
+        test_env = DummyVecEnv([lambda: test_env])
+
+
+
     test_env = VecVideoRecorder(
         test_env, 
         video_folder=video_folder, 
         record_video_trigger=lambda x: x == 0, 
-        video_length=500
+        video_length=500,
+        name_prefix=filename
     )
+
 
     obs = test_env.reset()
     done = False
     while not done:
-        action, _ = model.predict(obs)
+        action, _ = model.predict(obs, deterministic=True)
         obs, reward, done, info = test_env.step(action)
 
     test_env.close()
